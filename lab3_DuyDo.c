@@ -5,8 +5,7 @@
 
   Lab 3: structures and dynamic memory
 
-  Authors: Kevin Wortman (kwortman@csu.fullerton.edu) (REPLACE THIS
-  WITH YOUR NAMES AND CSUF EMAIL ADDRESSES)
+  Authors: Duy Do  (ddo@csu.fullerton.edu)
 
 */ 
 
@@ -19,7 +18,6 @@
    declarations alone. */
 
 struct Queue;
-struct NODE;
 
 /* Allocate and return a pointer to an empty queue, or return NULL if
    allocation failed. */
@@ -68,8 +66,6 @@ void queue_print(struct Queue* queue);
 
 /********** START OF CODE TO MODIFY **********/
 
-#define QUEUE_CAPACITY 100000 // one hundred thousand
-
 /* This is a poor implementation of the queue interface based upon a
    fixed-size array. The array approach has two big flaws: it is
    limited to QUEUE_CAPACITY elements, and pushing an element to the
@@ -91,10 +87,10 @@ void queue_print(struct Queue* queue);
    same.
 */
 
- struct Queue {
+struct Queue {
   int n;
-  struct Queue *front;
-  struct Queue *back;
+  struct NODE *front;
+  struct NODE *back;
 };
 
 struct NODE {
@@ -102,6 +98,7 @@ struct NODE {
   struct NODE *previous;
   struct NODE *next;
 };
+
 struct Queue* queue_make() {
   struct Queue* queue;
 
@@ -126,23 +123,22 @@ int queue_length(struct Queue* queue) {
 }
 
 int queue_push_front(struct Queue* queue, int data) {
-  int i;
   assert(queue != NULL);
   struct NODE *newNode;
   newNode = malloc(sizeof(struct NODE));
   newNode->data = data;
   newNode->previous = NULL;
   newNode->next = NULL;
-  if(queue->front == NULL) queue->front = newNode;
-  else{
-    newNode->next = front;
-    front = newNode->previous;
+
+  if(queue->front == NULL){
+    queue->front = newNode;
+    queue->back = newNode;
   }
-
-  /*for (i = QUEUE_CAPACITY - 1; i > 0; i--)
-    queue->data[i] = queue->data[i-1];
-
-    queue->data[0] = data;*/
+  else{
+    newNode->next = queue->front;
+    queue->front->previous = newNode;
+    queue->front = newNode;
+  }
 
   queue->n++;
 
@@ -151,53 +147,63 @@ int queue_push_front(struct Queue* queue, int data) {
 
 int queue_push_back(struct Queue* queue, int data) {
   assert(queue != NULL);
-  //assert(queue->n < QUEUE_CAPACITY);
+  
   struct NODE *newNode;
   newNode = malloc(sizeof(struct NODE));
   newNode->data = data;
   newNode->previous = NULL;
   newNode->next = NULL;
-  if(queue-> back == NULL) queue->back = newNode;
+
+  if(queue-> back == NULL){
+    queue->front = newNode;
+    queue->back = newNode;
+  }
   else{
-    newNode->previous = back;
-    back = newNode -> next;
+    queue->back->next = newNode;
+    newNode->previous =queue-> back;
+    queue->back = newNode;
   }
   queue->n++;
   return 1;
-}
+  }
 
 int queue_front(struct Queue* queue) {
   assert(queue != NULL);
   assert(queue_length(queue) > 0);
 
-  return front->data;
+  return queue->front->data;
 }
 
 int queue_back(struct Queue* queue) {
   assert(queue != NULL);
   assert(queue_length(queue) > 0);
 
-  return back->data;
+  return queue->back->data;
 }
 
-void queue_pop_front(struct Queue* queue) {
-  int i;
 
+void queue_pop_front(struct Queue* queue) {
   assert(queue != NULL);
   assert(queue_length(queue) > 0);
-
-  /*for (i = 1; i < QUEUE_CAPACITY; i++)
-    queue->data[i - 1] = queue->data[i];*/
-  front = front->next;
-  free(front->previous);
-  queue->n--;
+  if(queue_length(queue)==1){
+    free(queue->front);
+    queue->front = NULL;
+    queue->back = NULL;
+    queue->n--;
+  }
+  else{
+    queue->front = queue->front->next;
+    free(queue->front->previous);
+    queue->front->previous = NULL;
+    queue->n--;
+  }
 }
 
 void queue_pop_back(struct Queue* queue) {
   assert(queue != NULL);
   assert(queue_length(queue) > 0);
-  back = back->previous;
-  free(back->next);
+  queue->back = queue->back->previous;
+  free(queue->back->next);
   queue->n--;
 }
 
@@ -205,24 +211,26 @@ void queue_clear(struct Queue* queue) {
   assert(queue != NULL);
 
   queue->n = 0;
-  while(front != back){
-    back = back->previous;
-    free(back->next);
+  while(queue->front != queue->back){
+    queue->back = queue->back->previous;
+    free(queue->back->next);
   }
-  front = back = NULL;
+  free(queue->front);
+  queue->front =queue->back = NULL;
 }
 
 void queue_print(struct Queue* queue) {
-  int i;
-
   assert(queue != NULL);
-
-  printf("queue:");
-
-  struct NODE *ptr;
-  ptr = front;
-  while(ptr != back->next) printf("%d\t", ptr->data);
-
+  if(queue->front == NULL) printf("The queue is empty.");
+  else{
+    struct NODE *ptr;
+    ptr = queue->front;
+    printf("queue:");
+    while(ptr != queue->back->next){
+      printf("%d ", ptr->data);
+      ptr = ptr->next;
+    }
+  }
   printf("\n");
 }
 
@@ -312,7 +320,6 @@ int main(void) {
      the queue holds together. The array implementation will be
      noticeably slow here, but should work. The list implementation
      should be much faster. */
-
   printf("30k stress test...\n");
 
   for (i = 0; i < 30000; i++) {
@@ -321,7 +328,6 @@ int main(void) {
     assert(queue_back(queue) == 0);
   }
   assert(queue_length(queue) == 30000);
-
   /* Test queue_clear(). */
 
   queue_clear(queue);
